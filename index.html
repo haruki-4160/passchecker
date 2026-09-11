@@ -524,16 +524,24 @@
     <div class="card">
       <div class="card-title">Email Breach Scanner</div>
       <p style="font-size:13px; color:var(--text2); margin-bottom:14px;">
-        Check if your email address has appeared in known data breaches.
+        Check if your email address has appeared in known data breaches directly in the app.
       </p>
-      <div class="input-wrap" style="margin-bottom: 12px;">
-        <input class="pw-input" id="emailInput" type="email" placeholder="Enter your email address…" style="padding-right: 16px;">
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <div class="input-wrap" style="flex: 2;">
+          <input class="pw-input" id="emailInput" type="email" placeholder="Enter your email address…" style="padding-right: 16px;">
+        </div>
+        <div class="input-wrap" style="flex: 1;">
+          <input class="pw-input" id="hibpApiKey" type="password" placeholder="HIBP API Key" style="padding-right: 16px; font-size: 14px;">
+        </div>
       </div>
+      
       <button class="breach-btn" onclick="checkEmailBreach()">
-        📧 Scan Email for Breaches ↗
+        📧 Scan Email for Breaches
       </button>
+      <div class="breach-result" id="emailBreachResult"></div>
       <p style="font-size:11px; color:var(--text3); margin-top:10px; text-align:center;">
-        Opens the official HaveIBeenPwned secure scanner.
+        * An API key from haveibeenpwned.com is required to scan emails programmatically.
       </p>
     </div>
 
@@ -938,10 +946,51 @@ async function checkBreach() {
 
 function checkEmailBreach() {
   const email = document.getElementById('emailInput').value.trim();
+  const apiKey = document.getElementById('hibpApiKey').value.trim();
+  const res = document.getElementById('emailBreachResult');
+
   if (!email) { showToast('Please enter an email address'); return; }
-  // HIBP API requires a paid key for email checks, so we securely redirect to their scanner
-  const url = `https://haveibeenpwned.com/account/${encodeURIComponent(email)}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (!apiKey) {
+    res.style.display = 'flex';
+    res.className = 'breach-result error';
+    res.innerHTML = `⚠️ An API key is required to check emails directly in the app.`;
+    return;
+  }
+
+  res.style.display = 'flex';
+  res.className = 'breach-result';
+  res.innerHTML = `⏳ Scanning...`;
+
+  fetch(`https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`, {
+    headers: { 'hibp-api-key': apiKey }
+  })
+  .then(response => {
+    if (response.status === 404) {
+      res.className = 'breach-result safe';
+      res.innerHTML = `✅ <strong>Good news!</strong> No breaches found for this email.`;
+      return null;
+    } else if (response.ok) {
+      return response.json();
+    } else if (response.status === 401) {
+      throw new Error('Invalid API Key');
+    } else {
+      throw new Error('API Error');
+    }
+  })
+  .then(breaches => {
+    if (breaches) {
+      res.className = 'breach-result pwned';
+      const names = breaches.map(b => b.Name).slice(0, 3).join(', ');
+      const more = breaches.length > 3 ? ` and ${breaches.length - 3} more` : '';
+      res.innerHTML = `🚨 <strong>Breached!</strong> Found in ${breaches.length} data breaches (e.g., ${names}${more}).`;
+    }
+  })
+  .catch(e => {
+    res.className = 'breach-result error';
+    res.innerHTML = e.message === 'Invalid API Key' 
+      ? `⚠️ The API Key you provided is invalid or expired.` 
+      : `⚠️ Error connecting to the breach database.`;
+  });
 }
 
 // ── GENERATOR ──
