@@ -371,6 +371,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('checker')">🔍 Checker</button>
     <button class="tab" onclick="switchTab('generator')">⚡ Generator</button>
+    <button class="tab" onclick="switchTab('vault')">📁 Vault</button>
   </div>
 
   <!-- CHECKER PANEL -->
@@ -572,6 +573,31 @@
     </div>
 
   </div><!-- /generator -->
+
+  <!-- VAULT PANEL -->
+  <div class="panel" id="panel-vault">
+    <div class="card">
+      <div class="card-title">File Encryption / Decryption</div>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:14px;">
+        Encrypt or decrypt files locally in your browser. Files never leave your device.
+      </p>
+
+      <div class="option-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div class="option-label">Select File</div>
+        <input type="file" id="vaultFile" style="color:var(--text); width: 100%; padding: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);" />
+      </div>
+
+      <div class="option-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+        <div class="option-label">Password</div>
+        <input class="pw-input" id="vaultPassword" type="password" placeholder="Encryption/Decryption Password" style="padding-right:16px;">
+      </div>
+
+      <div class="gen-actions" style="flex-direction: row; margin-top: 20px;">
+        <button class="gen-btn primary" style="flex:1; justify-content:center;" onclick="encryptFile()">🔒 Encrypt</button>
+        <button class="gen-btn primary" style="flex:1; justify-content:center;" onclick="decryptFile()">🔓 Decrypt</button>
+      </div>
+    </div>
+  </div><!-- /vault -->
 </main>
 
 <div class="toast" id="toast"></div>
@@ -601,11 +627,14 @@ function toggleTheme() {
 
 // ── TABS ──
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', (i === 0 && tab === 'checker') || (i === 1 && tab === 'generator'));
-  });
+  const tabs = document.querySelectorAll('.tab');
+  tabs[0].classList.toggle('active', tab === 'checker');
+  tabs[1].classList.toggle('active', tab === 'generator');
+  if (tabs[2]) tabs[2].classList.toggle('active', tab === 'vault');
   document.getElementById('panel-checker').classList.toggle('active', tab === 'checker');
   document.getElementById('panel-generator').classList.toggle('active', tab === 'generator');
+  const pv = document.getElementById('panel-vault');
+  if (pv) pv.classList.toggle('active', tab === 'vault');
 }
 
 // ── INPUT HELPERS ──
@@ -952,6 +981,87 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── FILE VAULT (ENCRYPTION/DECRYPTION) ──
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptFile() {
+  const fileInput = document.getElementById('vaultFile');
+  const pwInput = document.getElementById('vaultPassword');
+  if (!fileInput.files.length) return showToast('Please select a file');
+  if (!pwInput.value) return showToast('Please enter a password');
+
+  try {
+    const file = fileInput.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(pwInput.value, salt);
+    
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, arrayBuffer);
+    
+    const finalBuffer = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+    finalBuffer.set(salt, 0);
+    finalBuffer.set(iv, salt.length);
+    finalBuffer.set(new Uint8Array(encrypted), salt.length + iv.length);
+    
+    downloadFile(finalBuffer, file.name + '.enc');
+    showToast('File encrypted successfully!');
+  } catch (e) {
+    showToast('Encryption failed');
+  }
+}
+
+async function decryptFile() {
+  const fileInput = document.getElementById('vaultFile');
+  const pwInput = document.getElementById('vaultPassword');
+  if (!fileInput.files.length) return showToast('Please select a file');
+  if (!pwInput.value) return showToast('Please enter a password');
+
+  try {
+    const file = fileInput.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const data = new Uint8Array(arrayBuffer);
+    
+    const salt = data.slice(0, 16);
+    const iv = data.slice(16, 28);
+    const encrypted = data.slice(28);
+    
+    const key = await deriveKey(pwInput.value, salt);
+    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted);
+    
+    let outName = file.name;
+    if (outName.endsWith('.enc')) outName = outName.slice(0, -4);
+    else outName = 'decrypted_' + outName;
+    
+    downloadFile(new Uint8Array(decrypted), outName);
+    showToast('File decrypted successfully!');
+  } catch (e) {
+    showToast('Decryption failed. Wrong password?');
+  }
+}
+
+function downloadFile(uint8Array, filename) {
+  const blob = new Blob([uint8Array]);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── INIT ──
