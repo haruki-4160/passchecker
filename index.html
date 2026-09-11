@@ -510,7 +510,7 @@
 
     <!-- BREACH CHECK -->
     <div class="card">
-      <div class="card-title">Breach check</div>
+      <div class="card-title">Password Breach Check</div>
       <p style="font-size:13px; color:var(--text2); margin-bottom:14px;">
         Checks against the HaveIBeenPwned database using k-anonymity — only the first 5 characters of your password's SHA-1 hash are sent.
       </p>
@@ -518,6 +518,23 @@
         🛡️ Check if this password was breached
       </button>
       <div class="breach-result" id="breachResult"></div>
+    </div>
+
+    <!-- EMAIL BREACH SCANNER -->
+    <div class="card">
+      <div class="card-title">Email Breach Scanner</div>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:14px;">
+        Check if your email address has appeared in known data breaches.
+      </p>
+      <div class="input-wrap" style="margin-bottom: 12px;">
+        <input class="pw-input" id="emailInput" type="email" placeholder="Enter your email address…" style="padding-right: 16px;">
+      </div>
+      <button class="breach-btn" onclick="checkEmailBreach()">
+        📧 Scan Email for Breaches ↗
+      </button>
+      <p style="font-size:11px; color:var(--text3); margin-top:10px; text-align:center;">
+        Opens the official HaveIBeenPwned secure scanner.
+      </p>
     </div>
 
   </div><!-- /checker -->
@@ -897,6 +914,14 @@ async function checkBreach() {
 
   btn.textContent = '🛡️ Check again';
   btn.disabled = false;
+}
+
+function checkEmailBreach() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email) { showToast('Please enter an email address'); return; }
+  // HIBP API requires a paid key for email checks, so we securely redirect to their scanner
+  const url = `https://haveibeenpwned.com/account/${encodeURIComponent(email)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 // ── GENERATOR ──
