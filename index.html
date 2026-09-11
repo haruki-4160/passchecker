@@ -5,63 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PassGuard — Password Strength & Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <style>
   :root {
-    --bg: #0d0f14;
-    --surface: rgba(21, 24, 32, 0.45);
-    --surface2: rgba(28, 32, 48, 0.5);
-    --surface3: rgba(35, 40, 64, 0.6);
-    --border: rgba(255, 255, 255, 0.08);
-    --border2: rgba(255, 255, 255, 0.15);
-    --text: #e8eaf5;
-    --text2: #8b93b8;
-    --text3: #4a5280;
-    --accent: #6c8aff;
-    --accent2: #3d5cdf;
-    --weak: #ff4d6a;
-    --fair: #ff9f45;
+    --bg: #000000;
+    --surface: rgba(15, 15, 15, 0.6);
+    --surface2: rgba(25, 25, 25, 0.7);
+    --surface3: rgba(40, 40, 40, 0.8);
+    --border: rgba(255, 255, 255, 0.12);
+    --border2: rgba(255, 255, 255, 0.25);
+    --text: #ffffff;
+    --text2: #a0a0a0;
+    --text3: #707070;
+    --accent: #00f0ff;
+    --accent2: #00b0ff;
+    --weak: #ff3366;
+    --fair: #ff9933;
     --good: #f5d842;
-    --strong: #42d97e;
-    --vstrong: #00e5cc;
+    --strong: #33ff99;
+    --vstrong: #00ffcc;
     --radius: 12px;
     --radius-sm: 8px;
     --mono: 'Courier New', monospace;
     --sans: system-ui, -apple-system, sans-serif;
   }
   [data-theme="light"] {
-    --bg: #f0f2f8;
-    --surface: rgba(255, 255, 255, 0.6);
-    --surface2: rgba(255, 255, 255, 0.8);
-    --surface3: rgba(234, 237, 255, 0.8);
-    --border: rgba(0, 0, 0, 0.08);
-    --border2: rgba(0, 0, 0, 0.15);
-    --text: #0d1030;
-    --text2: #4a5280;
-    --text3: #8b93c8;
-    --accent: #3d5cdf;
-    --accent2: #2040c0;
+    --bg: #f4f4f5;
+    --surface: rgba(255, 255, 255, 0.7);
+    --surface2: rgba(240, 240, 240, 0.8);
+    --surface3: rgba(225, 225, 225, 0.9);
+    --border: rgba(0, 0, 0, 0.1);
+    --border2: rgba(0, 0, 0, 0.2);
+    --text: #000000;
+    --text2: #555555;
+    --text3: #888888;
+    --accent: #0055ff;
+    --accent2: #0033cc;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
     font-family: var(--sans);
-    background: linear-gradient(-45deg, #0f111a, #161a2b, #0d1222, #101524);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
+    background: radial-gradient(circle at 10% 20%, #001f3f, #000000 50%, #000000 100%);
+    background-size: 200% 200%;
+    animation: gradientBG 20s ease infinite alternate;
     color: var(--text);
     min-height: 100vh;
     line-height: 1.6;
     transition: background 0.3s, color 0.3s;
   }
   [data-theme="light"] body {
-    background: linear-gradient(-45deg, #f0f2f8, #e0e5f5, #eef0fa, #e6eaf8);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
+    background: radial-gradient(circle at 10% 20%, #e0f2ff, #f4f4f5 50%, #f4f4f5 100%);
+    background-size: 200% 200%;
+    animation: gradientBG 20s ease infinite alternate;
   }
   @keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
   }
 
   /* NAV */
@@ -685,11 +685,31 @@ function switchTab(tab) {
   tabs[0].classList.toggle('active', tab === 'checker');
   tabs[1].classList.toggle('active', tab === 'generator');
   if (tabs[2]) tabs[2].classList.toggle('active', tab === 'vault');
-  document.getElementById('panel-checker').classList.toggle('active', tab === 'checker');
-  document.getElementById('panel-generator').classList.toggle('active', tab === 'generator');
-  const pv = document.getElementById('panel-vault');
-  if (pv) pv.classList.toggle('active', tab === 'vault');
+  
+  const panels = Array.from(document.querySelectorAll('.panel'));
+  const activePanel = document.getElementById('panel-' + tab);
+  
+  // Fade out current panels
+  panels.forEach(p => {
+    if (p.classList.contains('active') && p !== activePanel) {
+      gsap.to(p, { opacity: 0, y: 10, duration: 0.2, onComplete: () => p.classList.remove('active') });
+    }
+  });
+
+  // Fade in new panel
+  setTimeout(() => {
+    activePanel.classList.add('active');
+    gsap.fromTo(activePanel, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' });
+  }, 200);
 }
+
+// ── INITIAL GSAP ANIMATION ──
+document.addEventListener("DOMContentLoaded", () => {
+  gsap.from("nav", { y: -50, opacity: 0, duration: 0.6, ease: "power3.out" });
+  gsap.from(".hero", { y: 30, opacity: 0, duration: 0.8, delay: 0.2, ease: "power3.out" });
+  gsap.from(".tabs", { y: 20, opacity: 0, duration: 0.6, delay: 0.4, ease: "power3.out" });
+  gsap.from(".panel.active", { y: 20, opacity: 0, duration: 0.6, delay: 0.5, ease: "power3.out" });
+});
 
 // ── INPUT HELPERS ──
 function toggleVisibility() {
