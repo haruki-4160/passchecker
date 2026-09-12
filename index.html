@@ -795,7 +795,7 @@ function analyzePassword(pw) {
   document.getElementById('scoreGrade').textContent = level.label;
   document.getElementById('scoreGrade').style.color = level.color;
   document.getElementById('scoreDesc').textContent = z.feedback.warning || getCrackDesc(z.crack_times_display);
-  document.getElementById('crackTime').textContent = z.crack_times_display.offline_fast_hashing_1e10_per_second;
+  document.getElementById('crackTime').textContent = z.crack_times_display.offline_slow_hashing_1e4_per_second;
 
   const arc = document.getElementById('scoreArc');
   const circumference = 201;
@@ -848,8 +848,8 @@ function analyzePassword(pw) {
 }
 
 function getCrackDesc(d) {
-  const t = d.offline_fast_hashing_1e10_per_second;
-  return `Estimated crack time: ${t} (fast offline attack)`;
+  const t = d.offline_slow_hashing_1e4_per_second;
+  return `Estimated crack time: ${t} (standard offline attack)`;
 }
 
 function buildSuggestions(pw, z, rules, entropy) {
